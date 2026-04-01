@@ -1,204 +1,68 @@
-# SalesNeuro 🧠
+# SalesNeuro
 
-> **AI-powered buyer psychology intelligence and personalized sales outreach platform.**
+SalesNeuro is an AI-powered B2B Buyer Psychology Intelligence and Personalized Outreach Platform. It uses state-of-the-art language models and multi-agent systems via [CrewAI](https://github.com/joaomdmoura/crewAI) to deeply analyze prospects and draft highly personalized, psychological sales outreach.
 
-SalesNeuro uses a multi-agent AI pipeline to research prospects, build psychological profiles (Big Five / DISC), and generate hyper-personalized cold email sequences — all in one automated workflow.
+## 🚀 Features
 
----
+- **Automated Open-Source Intelligence:** Agents perform automated web searches and gather public information on targets via Tavily.
+- **Psychological Profiling:** Utilizes Big Five (OCEAN) and DISC profile frameworks to match product strengths with human psychology.
+- **Dynamic AI Copywriting:** Tailors cold emails based on the resulting psychological profiles rather than generic templates.
+- **Modern Stack:** 
+  - **Frontend:** Next.js, React, Tailwind CSS.
+  - **Backend:** FastAPI, Python, CrewAI, LiteLLM (integrating with NVIDIA NIM / OpenAI compatible platforms), ChromaDB.
 
-## ✨ Features
+## 🛠 Prerequisites
 
-- 🔍 **Prospect Research** — Automated OSINT via Tavily web search
-- 🧬 **Psychological Profiling** — Big Five (OCEAN) scoring + DISC type classification
-- 🎯 **Sales Strategy** — AI-ranked value propositions matched to buyer psychology
-- ✉️ **Email Copywriting** — 3-email cold outreach sequences tailored per prospect
-- ⚡ **RAG-Augmented** — ChromaDB vector store for personality & product knowledge
-- 🖥️ **Full-Stack** — Next.js frontend + FastAPI backend
+- Node.js (v18+)
+- Python (3.10+)
 
----
+## 💻 Running Locally
 
-## 🏗️ Architecture
+You'll need two separate terminal windows to run both the frontend and the backend.
 
-```
-salesneuro/
-├── backend/                  # FastAPI + CrewAI pipeline
-│   ├── app/
-│   │   ├── agents/           # CrewAI crew (4-agent pipeline)
-│   │   ├── api/              # REST endpoints
-│   │   ├── core/             # Config & settings
-│   │   ├── models/           # Pydantic schemas
-│   │   ├── rag/              # ChromaDB retrieval
-│   │   └── services/         # Business logic
-│   ├── ingest_rag.py         # Populate the vector store
-│   └── requirements.txt
-├── frontend/                 # Next.js 15 app
-│   └── src/
-│       ├── app/              # App Router pages
-│       ├── components/       # UI components
-│       └── lib/              # API client
-└── data/
-    └── chroma_db/            # Vector store (auto-generated, gitignored)
-```
+### 1. Setup Environment Variables
 
-### Agent Pipeline
-
-```
-Input: Prospect Name + Company
-        │
-        ▼
-┌─────────────────────┐
-│  1. Researcher      │  ← Tavily web search
-│  Lead Prospect      │
-└────────┬────────────┘
-         │
-         ▼
-┌─────────────────────┐
-│  2. Profiler        │  ← ChromaDB personality corpus
-│  Psych Profiler     │
-└────────┬────────────┘
-         │
-         ▼
-┌─────────────────────┐
-│  3. Strategist      │  ← ChromaDB product corpus
-│  Sales Strategist   │
-└────────┬────────────┘
-         │
-         ▼
-┌─────────────────────┐
-│  4. Copywriter      │  ← 3-email outreach sequence
-│  Outreach Writer    │
-└─────────────────────┘
-        │
-        ▼
-Output: Research + Profile + Strategy + Emails
-```
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Python 3.11+
-- Node.js 18+
-- [NVIDIA NIM API key](https://build.nvidia.com/) (free tier available)
-- [Tavily API key](https://tavily.com/) (free tier: 1,000 searches/month)
-
-### 1. Clone the repo
-
+In the `backend` directory, create a `.env` file referencing `.env.example`:
 ```bash
-git clone https://github.com/YOUR_USERNAME/salesneuro.git
-cd salesneuro
+TAVILY_API_KEY="your_tavily_key"
+NVIDIA_API_KEY="your_nvidia_nim_key"
 ```
 
-### 2. Backend setup
+### 2. Run the Backend
+
+Navigate to the `backend` directory, set up the virtual environment, install dependencies, and run the FastAPI server.
 
 ```bash
 cd backend
-
-# Create & activate virtual environment
 python -m venv venv
-.\venv\Scripts\Activate        # Windows
-# source venv/bin/activate    # Mac/Linux
 
-# Install dependencies
+# Windows
+.\venv\Scripts\Activate
+
+# Linux/Mac
+source venv/bin/activate
+
 pip install -r requirements.txt
 
-# Configure environment
-cp .env.example .env
-# Edit .env and add your API keys
-```
-
-### 3. Configure `.env`
-
-```env
-NVIDIA_API_KEY="nvapi-..."
-TAVILY_API_KEY="tvly-..."
-```
-
-### 4. Ingest RAG data (first time only)
-
-```bash
+# Run an initial RAG ingestion (required for ChromaDB corpus setup)
 python ingest_rag.py
-```
 
-### 5. Start the backend
-
-```bash
+# Start the server
 uvicorn app.main:app --reload --port 8000
 ```
+Backend will be live at `http://localhost:8000`
 
-Backend runs at → `http://localhost:8000`  
-API docs (Swagger) → `http://localhost:8000/docs`
+### 3. Run the Frontend
 
-### 6. Frontend setup
+Navigate to the `frontend` directory, install packages, and spin up the development server.
 
 ```bash
-cd ../frontend
+cd frontend
 npm install
 npm run dev
 ```
+Frontend will be live at `http://localhost:3000`
 
-Frontend runs at → `http://localhost:3000`
+## 🧠 Using The API Direct
 
----
-
-## 🔌 API Reference
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/health` | Health check |
-| `POST` | `/api/run` | Run the full 4-agent pipeline |
-| `GET` | `/api/prospects` | List saved prospect results |
-
-### Example Request
-
-```bash
-curl -X POST http://localhost:8000/api/run \
-  -H "Content-Type: application/json" \
-  -d '{"prospect_name": "Elon Musk", "company_name": "Tesla"}'
-```
-
----
-
-## 🤖 Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| LLM | Meta Llama 3.1 70B via NVIDIA NIM |
-| Agent Framework | CrewAI |
-| Vector Store | ChromaDB |
-| Embeddings | `all-MiniLM-L6-v2` (SentenceTransformers) |
-| Web Search | Tavily API |
-| Backend | FastAPI + Uvicorn |
-| Frontend | Next.js 15 (App Router) |
-| Validation | Pydantic v2 |
-
----
-
-## 📁 Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `NVIDIA_API_KEY` | ✅ | NVIDIA NIM API key for Llama 3.1 70B |
-| `TAVILY_API_KEY` | ✅ | Tavily search API key |
-
-Never commit your `.env` file. A `.env.example` template is provided.
-
----
-
-## 🛡️ Security Notes
-
-- `.env` is gitignored — **never commit real API keys**
-- `data/chroma_db/` is gitignored — regenerate locally with `ingest_rag.py`
-- `venv/` and `node_modules/` are excluded from the repo
-
----
-
-## 📄 License
-
-MIT License — see [LICENSE](LICENSE) for details.
-
----
-
-<p align="center">Built with CrewAI · FastAPI · Next.js</p>
+Head to `http://localhost:8000/docs` to interact directly with the Swagger UI and test the `/api/run` prospect execution endpoint.
