@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { RunResult } from "@/lib/types";
-import { runPipeline, listProspects } from "@/lib/api";
+import { runPipeline, listProspects, listRuns, getRun } from "@/lib/api";
 
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
@@ -10,13 +10,16 @@ import ProspectForm from "@/components/ProspectForm";
 import LoadingPipeline from "@/components/LoadingPipeline";
 import ResultsDashboard from "@/components/ResultsDashboard";
 
-import { LayoutDashboard, Sparkles } from "lucide-react";
+import { LayoutDashboard, Sparkles, Clock } from "lucide-react";
 
-type AppState = "idle" | "loading" | "result" | "error";
+type AppState = "idle" | "loading" | "result" | "error" | "history";
+type TabMode = "new" | "history";
 
 export default function Home() {
   const [state, setState]             = useState<AppState>("idle");
+  const [tabMode, setTabMode]         = useState<TabMode>("new");
   const [history, setHistory]         = useState<RunResult[]>([]);
+  const [runs, setRuns]               = useState<Array<{ id: string; prospect_name: string; company_name: string; created_at: string; status: string }>>([]);
   const [activeResult, setActiveResult] = useState<RunResult | null>(null);
   const [errorMsg, setErrorMsg]       = useState("");
   const [loadingInfo, setLoadingInfo] = useState({ name: "", company: "" });
@@ -32,6 +35,13 @@ export default function Home() {
         }
       })
       .catch(() => {}); // backend may not be running yet
+
+    // Also load runs for history tab
+    listRuns(50)
+      .then((runList) => {
+        setRuns(runList);
+      })
+      .catch(() => {});
   }, []);
 
   const activeKey = activeResult
@@ -66,6 +76,23 @@ export default function Home() {
     setState("result");
   };
 
+  const handleSelectRun = async (runId: string) => {
+    try {
+      const response = await getRun(runId);
+      if (response.status === "success" && response.result) {
+        setActiveResult(response.result);
+        setState("result");
+        setTabMode("new");
+      } else {
+        setErrorMsg("Failed to load run details");
+        setState("error");
+      }
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Failed to load run");
+      setState("error");
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col" style={{ background: "var(--bg-base)" }}>
       <Navbar />
@@ -82,35 +109,72 @@ export default function Home() {
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-4xl space-y-5 px-4 py-6 sm:px-6">
 
-            {/* Page header */}
-            <div className="flex items-center gap-2 mb-2">
-              <LayoutDashboard size={16} style={{ color: "var(--text-muted)" }} />
-              <h1 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
-                Intelligence Dashboard
-              </h1>
+            {/* Page header with tab switcher */}
+            <div className="flex items-center justify-between gap-2 mb-6">
+              <div className="flex items-center gap-2">
+                <LayoutDashboard size={16} style={{ color: "var(--text-muted)" }} />
+                <h1 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
+                  Intelligence Dashboard
+                </h1>
+              </div>
+
+              {/* Tab switcher */}
+              <div className="flex gap-2 rounded-lg p-1" style={{ background: "var(--bg-surface)" }}>
+                <button
+                  onClick={() => { setTabMode("new"); setState("idle"); setErrorMsg(""); }}
+                  className="px-3 py-1.5 rounded text-xs font-medium transition-colors"
+                  style={{
+                    background: tabMode === "new" ? "var(--accent)" : "transparent",
+                    color: tabMode === "new" ? "white" : "var(--text-secondary)",
+                  }}
+                >
+                  New Analysis
+                </button>
+                <button
+                  onClick={() => { setTabMode("history"); setState(runs.length > 0 ? "history" : "idle"); }}
+                  className="px-3 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-1"
+                  style={{
+                    background: tabMode === "history" ? "var(--accent)" : "transparent",
+                    color: tabMode === "history" ? "white" : "var(--text-secondary)",
+                  }}
+                >
+                  <Clock size={12} />
+                  History {runs.length > 0 && `(${runs.length})`}
+                </button>
+              </div>
             </div>
 
-            {/* Prospect input form */}
-            <ProspectForm onSubmit={handleRun} loading={state === "loading"} />
+            {/* New Analysis Tab */}
+            {tabMode === "new" && (
+              <>
+                {/* Prospect input form */}
+                <ProspectForm onSubmit={handleRun} loading={state === "loading"} />
 
-            {/* States */}
-            {state === "idle" && history.length === 0 && (
-              <EmptyState />
+                {/* States */}
+                {state === "idle" && history.length === 0 && (
+                  <EmptyState />
+                )}
+
+                {state === "loading" && (
+                  <LoadingPipeline
+                    prospectName={loadingInfo.name}
+                    companyName={loadingInfo.company}
+                  />
+                )}
+
+                {state === "error" && (
+                  <ErrorBanner message={errorMsg} onDismiss={() => setState("idle")} />
+                )}
+
+                {state === "result" && activeResult && (
+                  <ResultsDashboard result={activeResult} />
+                )}
+              </>
             )}
 
-            {state === "loading" && (
-              <LoadingPipeline
-                prospectName={loadingInfo.name}
-                companyName={loadingInfo.company}
-              />
-            )}
-
-            {state === "error" && (
-              <ErrorBanner message={errorMsg} onDismiss={() => setState("idle")} />
-            )}
-
-            {state === "result" && activeResult && (
-              <ResultsDashboard result={activeResult} />
+            {/* History Tab */}
+            {tabMode === "history" && (
+              <HistoryTab runs={runs} onSelectRun={handleSelectRun} />
             )}
           </div>
         </main>
@@ -206,6 +270,104 @@ function ErrorBanner({ message, onDismiss }: { message: string; onDismiss: () =>
       >
         Dismiss
       </button>
+    </div>
+  );
+}
+
+/* ── History Tab ─────────────────────────────────────────── */
+function HistoryTab({
+  runs,
+  onSelectRun,
+}: {
+  runs: Array<{ id: string; prospect_name: string; company_name: string; created_at: string; status: string }>;
+  onSelectRun: (runId: string) => void;
+}) {
+  if (runs.length === 0) {
+    return (
+      <div
+        className="flex flex-col items-center gap-4 rounded-2xl py-16 text-center"
+        style={{
+          background: "linear-gradient(135deg, rgba(99,102,241,0.05) 0%, rgba(6,182,212,0.03) 100%)",
+          border: "1px dashed var(--border)",
+        }}
+      >
+        <Clock size={32} style={{ color: "var(--text-muted)" }} />
+        <div>
+          <h3 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+            No analyses yet
+          </h3>
+          <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
+            Run an analysis to see it in your history
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 fade-in">
+      <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "var(--border)" }}>
+        <table className="w-full text-sm">
+          <thead style={{ background: "var(--bg-surface)" }}>
+            <tr style={{ borderBottom: "1px solid var(--border)" }}>
+              <th className="px-4 py-3 text-left font-medium" style={{ color: "var(--text-secondary)" }}>Prospect</th>
+              <th className="px-4 py-3 text-left font-medium" style={{ color: "var(--text-secondary)" }}>Company</th>
+              <th className="px-4 py-3 text-left font-medium" style={{ color: "var(--text-secondary)" }}>Date</th>
+              <th className="px-4 py-3 text-left font-medium" style={{ color: "var(--text-secondary)" }}>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {runs.map((run) => (
+              <tr
+                key={run.id}
+                onClick={() => onSelectRun(run.id)}
+                style={{
+                  cursor: "pointer",
+                  borderBottom: "1px solid var(--border)",
+                  transition: "background-color 0.2s",
+                }}
+                className="hover:bg-opacity-50"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(99, 102, 241, 0.05)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                }}
+              >
+                <td className="px-4 py-3" style={{ color: "var(--text-primary)" }}>
+                  <span className="font-medium">{run.prospect_name}</span>
+                </td>
+                <td className="px-4 py-3" style={{ color: "var(--text-secondary)" }}>
+                  {run.company_name}
+                </td>
+                <td className="px-4 py-3" style={{ color: "var(--text-secondary)" }}>
+                  {new Date(run.created_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </td>
+                <td className="px-4 py-3">
+                  <span
+                    className="inline-block px-2 py-1 rounded-md text-xs font-medium"
+                    style={{
+                      background: run.status === "success" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
+                      color: run.status === "success" ? "#22c55e" : "#ef4444",
+                    }}
+                  >
+                    {run.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+        Click a row to view full analysis details
+      </p>
     </div>
   );
 }

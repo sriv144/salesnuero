@@ -20,3 +20,21 @@ export async function listProspects(): Promise<RunResult[]> {
   if (!res.ok) throw new Error(`API error ${res.status}`);
   return res.json();
 }
+
+export async function listRuns(limit: number = 50): Promise<Array<{
+  id: string;
+  prospect_name: string;
+  company_name: string;
+  created_at: string;
+  status: string;
+}>> {
+  const res = await fetch(`${BASE_URL}/api/v1/runs?limit=${limit}`);
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  return res.json();
+}
+
+export async function getRun(runId: string): Promise<RunResponse> {
+  const res = await fetch(`${BASE_URL}/api/v1/runs/${runId}`);
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  return res.json();
+}
