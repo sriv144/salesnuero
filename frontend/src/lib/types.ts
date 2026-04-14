@@ -29,6 +29,8 @@ export interface EmailSequence {
 }
 
 export interface RunResult {
+  run_id: string;
+  created_at: string;
   prospect_name: string;
   company_name: string;
   research_summary: string;

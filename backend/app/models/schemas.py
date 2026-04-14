@@ -1,5 +1,7 @@
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from datetime import datetime
+from uuid import uuid4
 
 
 # --- Request Models ---
@@ -50,6 +52,8 @@ class EmailSequence(BaseModel):
 # --- Response Models ---
 
 class RunResult(BaseModel):
+    run_id: str = Field(default_factory=lambda: str(uuid4()))
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     prospect_name: str
     company_name: str
     research_summary: str

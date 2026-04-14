@@ -182,20 +182,14 @@ def _build_crew():
     )
 
 
-# Module-level crew instance (built once)
-_crew = None
-
-
-def get_crew() -> Crew:
-    global _crew
-    if _crew is None:
-        _crew = _build_crew()
-    return _crew
-
-
 def run_pipeline(prospect_name: str, company_name: str) -> RunResult:
-    """Execute the full 4-agent pipeline and return a structured RunResult."""
-    crew = get_crew()
+    """Execute the full 4-agent pipeline and return a structured RunResult.
+
+    Note: Crew is rebuilt per run to ensure agent goals with {prospect_name}
+    and {company_name} template variables are properly interpolated for each run.
+    The LLM calls are the bottleneck, not crew initialization.
+    """
+    crew = _build_crew()
     crew_output = crew.kickoff(
         inputs={"prospect_name": prospect_name, "company_name": company_name}
     )
