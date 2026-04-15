@@ -67,3 +67,33 @@ export interface ParsedEmail {
   ps: string;
   intent: string;
 }
+
+/* ── Async Job Types (v2 API) ─────────────────────────────── */
+
+export type JobStatus = "pending" | "running" | "completed" | "failed";
+
+export interface JobSubmitResponse {
+  job_id: string;
+  status: JobStatus;
+  message: string;
+}
+
+export interface JobStatusResponse {
+  job_id: string;
+  prospect_name: string;
+  company_name: string;
+  status: JobStatus;
+  created_at: string;        // ISO datetime string
+  completed_at: string | null;
+  result: RunResult | null;
+  error: string | null;
+}
+
+export interface JobListItem {
+  job_id: string;
+  prospect_name: string;
+  company_name: string;
+  status: JobStatus;
+  created_at: string;
+  completed_at: string | null;
+}

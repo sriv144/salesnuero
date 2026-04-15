@@ -1,3 +1,5 @@
+import datetime
+from enum import Enum
 from typing import Optional
 from pydantic import BaseModel
 
@@ -47,7 +49,7 @@ class EmailSequence(BaseModel):
     raw_output: str                    # full text from copywriter agent
 
 
-# --- Response Models ---
+# --- Pipeline Result ---
 
 class RunResult(BaseModel):
     prospect_name: str
@@ -65,3 +67,43 @@ class RunResponse(BaseModel):
     status: str                        # "success" | "error"
     result: Optional[RunResult] = None
     error: Optional[str] = None
+
+
+# --- Async Job Models ---
+
+class JobStatus(str, Enum):
+    pending = "pending"
+    running = "running"
+    completed = "completed"
+    failed = "failed"
+
+
+class JobSubmitResponse(BaseModel):
+    """Returned immediately from POST /api/run — before the pipeline executes."""
+    job_id: str
+    status: JobStatus
+    message: str = "Pipeline job submitted. Poll /api/jobs/{job_id} for status."
+
+
+class JobStatusResponse(BaseModel):
+    """Full job status including result once completed."""
+    job_id: str
+    prospect_name: str
+    company_name: str
+    status: JobStatus
+    created_at: datetime.datetime
+    completed_at: Optional[datetime.datetime] = None
+    result: Optional[RunResult] = None
+    error: Optional[str] = None
+
+
+class JobListItem(BaseModel):
+    """Lightweight job record for the list endpoint."""
+    job_id: str
+    prospect_name: str
+    company_name: str
+    status: JobStatus
+    created_at: datetime.datetime
+    completed_at: Optional[datetime.datetime] = None
+
+    model_config = {"from_attributes": True}

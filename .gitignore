@@ -16,6 +16,12 @@ build/
 # ChromaDB data
 data/chroma_db/
 
+# SQLite database (persists on disk, do not commit)
+backend/salesnuero.db
+
+# pytest cache
+.pytest_cache/
+
 # Node
 node_modules/
 .next/
