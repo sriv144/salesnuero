@@ -2,21 +2,45 @@
 
 SalesNeuro is an AI-powered B2B Buyer Psychology Intelligence and Personalized Outreach Platform. It uses state-of-the-art language models and multi-agent systems via [CrewAI](https://github.com/joaomdmoura/crewAI) to deeply analyze prospects and draft highly personalized, psychological sales outreach.
 
-## 🚀 Features
+## Features
 
 - **Automated Open-Source Intelligence:** Agents perform automated web searches and gather public information on targets via Tavily.
 - **Psychological Profiling:** Utilizes Big Five (OCEAN) and DISC profile frameworks to match product strengths with human psychology.
 - **Dynamic AI Copywriting:** Tailors cold emails based on the resulting psychological profiles rather than generic templates.
-- **Modern Stack:** 
+- **Modern Stack:**
   - **Frontend:** Next.js, React, Tailwind CSS.
   - **Backend:** FastAPI, Python, CrewAI, LiteLLM (integrating with NVIDIA NIM / OpenAI compatible platforms), ChromaDB.
 
-## 🛠 Prerequisites
+## Architecture
+
+A single `/api/run` call triggers a CrewAI pipeline backed by Tavily OSINT,
+the RAG corpus in ChromaDB, and an OpenAI-compatible chat model served via
+LiteLLM (NVIDIA NIM by default). Each agent has a focused role:
+
+```mermaid
+flowchart LR
+    U["Next.js UI (prospect form)"] --> API["FastAPI /api/run"]
+    API --> ORCH["CrewAI orchestrator"]
+    ORCH --> OSINT["OSINT agent<br/>(Tavily search)"]
+    ORCH --> PROFILE["Psych profiler<br/>(Big Five / DISC)"]
+    ORCH --> COPY["Copywriter agent"]
+    OSINT --> CTX["Prospect dossier"]
+    PROFILE --> CTX
+    CTX --> COPY
+    RAG[("ChromaDB<br/>product corpus")] -. retrieval .- COPY
+    LLM[("NVIDIA NIM /<br/>OpenAI-compatible LLM")] -. completions .- OSINT
+    LLM -. completions .- PROFILE
+    LLM -. completions .- COPY
+    COPY --> RESP["Personalized cold email + rationale"]
+    RESP --> U
+```
+
+## Prerequisites
 
 - Node.js (v18+)
 - Python (3.10+)
 
-## 💻 Running Locally
+## Running Locally
 
 You'll need two separate terminal windows to run both the frontend and the backend.
 
@@ -63,6 +87,10 @@ npm run dev
 ```
 Frontend will be live at `http://localhost:3000`
 
-## 🧠 Using The API Direct
+## Using The API Direct
 
 Head to `http://localhost:8000/docs` to interact directly with the Swagger UI and test the `/api/run` prospect execution endpoint.
+
+## License
+
+Released under the MIT License. See [LICENSE](LICENSE) for details.
